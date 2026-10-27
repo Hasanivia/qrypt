@@ -1,0 +1,220 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QRYPT — QR Generator</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #0b0b0d;
+      color: #f5f5f5;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      width: 100%;
+      padding: 24px 7%;
+      border-bottom: 1px solid #29292e;
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: 3px;
+    }
+
+    main {
+      width: min(92%, 520px);
+      margin: 65px auto;
+    }
+
+    .tag {
+      color: #aaaab4;
+      font-size: 12px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      font-size: clamp(34px, 8vw, 48px);
+      margin: 14px 0;
+    }
+
+    .description {
+      color: #aaaab4;
+      line-height: 1.6;
+      margin-bottom: 30px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 110px;
+      padding: 15px;
+      border: 1px solid #36363d;
+      border-radius: 12px;
+      background: #151518;
+      color: white;
+      font: inherit;
+      resize: vertical;
+      outline: none;
+    }
+
+    textarea:focus { border-color: #aaaab4; }
+
+    button {
+      width: 100%;
+      margin-top: 14px;
+      padding: 15px;
+      border: 0;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    #generate {
+      background: #f5f5f5;
+      color: #111;
+    }
+
+    #download {
+      background: #242429;
+      color: white;
+      border: 1px solid #38383f;
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    #result {
+      display: none;
+      margin-top: 28px;
+      padding: 24px;
+      background: #151518;
+      border: 1px solid #303036;
+      border-radius: 16px;
+      text-align: center;
+    }
+
+    #qr {
+      width: 240px;
+      max-width: 100%;
+      background: white;
+      padding: 10px;
+      border-radius: 8px;
+    }
+
+    #status {
+      color: #aaaab4;
+      font-size: 13px;
+      margin-top: 14px;
+      line-height: 1.5;
+    }
+
+    footer {
+      margin-top: auto;
+      padding: 24px;
+      color: #73737d;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <header>QRYPT</header>
+
+  <main>
+    <div class="tag">Simple. Fast. Useful.</div>
+    <h1>Создай свой QR-код.</h1>
+    <p class="description">
+      Вставь ссылку или любой текст — получи QR-код,
+      который можно сохранить и использовать.
+    </p>
+
+    <label for="content">Текст или ссылка</label>
+    <textarea id="content" placeholder="https://example.com или твой текст"></textarea>
+
+    <button id="generate">Создать QR-код</button>
+
+    <section id="result">
+      <img id="qr" alt="Твой QR-код">
+      <p id="status">QR-код готов.</p>
+      <button id="download">Скачать PNG</button>
+    </section>
+  </main>
+
+  <footer>QRYPT — QR tools</footer>
+
+  <script>
+    const content = document.getElementById("content");
+    const result = document.getElementById("result");
+    const qr = document.getElementById("qr");
+    const status = document.getElementById("status");
+    const download = document.getElementById("download");
+
+    let currentValue = "";
+
+    document.getElementById("generate").addEventListener("click", () => {
+      const value = content.value.trim();
+
+      if (!value) {
+        alert("Сначала введи текст или ссылку.");
+        return;
+      }
+
+      currentValue = value;
+      result.style.display = "block";
+      status.textContent = "Создаём QR-код...";
+      download.disabled = true;
+
+      qr.onload = () => {
+        status.textContent = "QR-код готов. Проверь его сканированием.";
+        download.disabled = false;
+      };
+
+      qr.onerror = () => {
+        status.textContent = "Не удалось создать код. Проверь подключение к интернету.";
+        download.disabled = true;
+      };
+
+      qr.src =
+        "https://api.qrserver.com/v1/create-qr-code/?size=500x500&format=png&data=" +
+        encodeURIComponent(value);
+    });
+
+    download.addEventListener("click", async () => {
+      if (!currentValue || !qr.complete || !qr.naturalWidth) return;
+
+      try {
+        const response = await fetch(qr.src);
+        if (!response.ok) throw new Error("Download failed");
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+
+        link.href = url;
+        link.download = "qrypt-qr.png";
+        link.click();
+
+        URL.revokeObjectURL(url);
+      } catch {
+        status.textContent =
+          "Скачивание не удалось. Проверь интернет и попробуй снова.";
+      }
+    });
+  </script>
+</body>
+</html>
