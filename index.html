@@ -30,7 +30,7 @@
 
     main {
       width: min(92%, 520px);
-      margin: 65px auto;
+      margin: 50px auto;
     }
 
     .tag {
@@ -45,6 +45,8 @@
       margin: 14px 0;
     }
 
+    h1 span { color: #aaaab4; }
+
     .description {
       color: #aaaab4;
       line-height: 1.6;
@@ -53,45 +55,62 @@
 
     label {
       display: block;
-      margin-bottom: 10px;
+      margin: 18px 0 9px;
       font-size: 14px;
     }
 
-    textarea {
+    input, textarea, select {
       width: 100%;
-      min-height: 110px;
-      padding: 15px;
+      padding: 13px;
       border: 1px solid #36363d;
-      border-radius: 12px;
+      border-radius: 10px;
       background: #151518;
       color: white;
       font: inherit;
-      resize: vertical;
       outline: none;
     }
 
-    textarea:focus { border-color: #aaaab4; }
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      border-color: #aaaab4;
+    }
+
+    input[type="color"] {
+      height: 48px;
+      padding: 5px;
+      cursor: pointer;
+    }
+
+    input[type="file"] {
+      font-size: 13px;
+    }
+
+    .fields[hidden] { display: none; }
 
     button {
       width: 100%;
       margin-top: 14px;
-      padding: 15px;
-      border: 0;
+      padding: 14px;
+      border: 1px solid #38383f;
       border-radius: 10px;
-      font-size: 15px;
+      background: #242429;
+      color: white;
+      font-size: 14px;
       font-weight: 700;
       cursor: pointer;
     }
 
+    button:hover { border-color: #777780; }
+
     #generate {
       background: #f5f5f5;
       color: #111;
-    }
-
-    #download {
-      background: #242429;
-      color: white;
-      border: 1px solid #38383f;
+      border-color: #f5f5f5;
+      margin-top: 24px;
     }
 
     button:disabled {
@@ -99,30 +118,65 @@
       cursor: not-allowed;
     }
 
-    #result {
-      display: none;
+    .colors {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .colors label { margin-top: 18px; }
+
+    #result, #history-section {
       margin-top: 28px;
-      padding: 24px;
+      padding: 22px;
       background: #151518;
       border: 1px solid #303036;
       border-radius: 16px;
-      text-align: center;
     }
 
-    #qr {
-      width: 240px;
-      max-width: 100%;
+    #result { display: none; text-align: center; }
+
+    #qr-canvas {
+      display: block;
+      width: 100%;
+      max-width: 320px;
+      height: auto;
+      margin: 0 auto;
       background: white;
-      padding: 10px;
       border-radius: 8px;
+      image-rendering: pixelated;
     }
 
     #status {
       color: #aaaab4;
       font-size: 13px;
-      margin-top: 14px;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+
+    .small-note {
+      color: #858590;
+      font-size: 12px;
       line-height: 1.5;
     }
+
+    h2 { font-size: 20px; }
+
+    .history-item {
+      padding: 12px;
+      margin: 10px 0;
+      border: 1px solid #303036;
+      border-radius: 10px;
+      overflow-wrap: anywhere;
+    }
+
+    .history-item p {
+      color: #aaaab4;
+      font-size: 12px;
+      margin: 6px 0 0;
+    }
+
+    .history-item button { margin-top: 10px; }
 
     footer {
       margin-top: auto;
@@ -132,89 +186,622 @@
     }
   </style>
 </head>
+
 <body>
   <header>QRYPT</header>
 
   <main>
     <div class="tag">Simple. Fast. Useful.</div>
-    <h1>Создай свой QR-код.</h1>
+    <h1>Создавай <span>QR-коды.</span></h1>
     <p class="description">
-      Вставь ссылку или любой текст — получи QR-код,
-      который можно сохранить и использовать.
+      Создай QR-код из текста, ссылки, Wi-Fi или контакта.
+      Настрой внешний вид и скачай результат.
     </p>
 
-    <label for="content">Текст или ссылка</label>
-    <textarea id="content" placeholder="https://example.com или твой текст"></textarea>
+    <label for="mode">Тип QR-кода</label>
+    <select id="mode">
+      <option value="text">Текст или ссылка</option>
+      <option value="wifi">Подключение к Wi-Fi</option>
+      <option value="contact">Контакт</option>
+      <option value="call">Звонок</option>
+      <option value="sms">SMS</option>
+    </select>
 
-    <button id="generate">Создать QR-код</button>
+    <div id="text-fields" class="fields">
+      <label for="content">Текст или ссылка</label>
+      <textarea id="content" placeholder="https://example.com или твой текст"></textarea>
+    </div>
+
+    <div id="wifi-fields" class="fields" hidden>
+      <label for="wifi-name">Название сети Wi-Fi (SSID)</label>
+      <input id="wifi-name" type="text" placeholder="Название сети">
+
+      <label for="wifi-password">Пароль Wi-Fi</label>
+      <input id="wifi-password" type="password" placeholder="Пароль сети">
+
+      <label for="wifi-security">Тип защиты сети</label>
+      <select id="wifi-security">
+        <option value="WPA">WPA / WPA2 / WPA3</option>
+        <option value="WEP">WEP</option>
+        <option value="nopass">Без пароля</option>
+      </select>
+    </div>
+
+    <div id="contact-fields" class="fields" hidden>
+      <label for="contact-name">Имя и фамилия</label>
+      <input id="contact-name" type="text" placeholder="Александр Иванов">
+
+      <label for="contact-phone">Телефон</label>
+      <input id="contact-phone" type="text" placeholder="+994...">
+
+      <label for="contact-email">Email</label>
+      <input id="contact-email" type="email" placeholder="name@example.com">
+    </div>
+
+    <div id="call-fields" class="fields" hidden>
+      <label for="call-phone">Номер телефона</label>
+      <input id="call-phone" type="tel" placeholder="+994...">
+    </div>
+
+    <div id="sms-fields" class="fields" hidden>
+      <label for="sms-phone">Номер телефона</label>
+      <input id="sms-phone" type="tel" placeholder="+994...">
+
+      <label for="sms-message">Текст сообщения (необязательно)</label>
+      <textarea id="sms-message" placeholder="Привет!"></textarea>
+    </div>
+
+    <label for="size">Размер скачиваемого QR-кода</label>
+    <select id="size">
+      <option value="256">256 × 256 px</option>
+      <option value="512" selected>512 × 512 px</option>
+      <option value="1024">1024 × 1024 px</option>
+    </select>
+
+    <div class="colors">
+      <div>
+        <label for="foreground">Цвет QR-кода</label>
+        <input id="foreground" type="color" value="#000000">
+      </div>
+      <div>
+        <label for="background">Цвет фона</label>
+        <input id="background" type="color" value="#ffffff">
+      </div>
+    </div>
+
+    <div class="logo-upload">
+      <label for="logo-upload">Логотип в центре QR-кода (необязательно)</label>
+      <input type="file" id="logo-upload" accept="image/png,image/jpeg,image/webp">
+      <button type="button" id="remove-logo">Убрать логотип</button>
+      <p class="small-note">
+        Для надёжного сканирования используй небольшой логотип
+        и проверяй готовый QR-код телефоном.
+      </p>
+    </div>
+
+    <button id="generate" type="button">Создать QR-код</button>
 
     <section id="result">
-      <img id="qr" alt="Твой QR-код">
-      <p id="status">QR-код готов.</p>
-      <button id="download">Скачать PNG</button>
+      <canvas id="qr-canvas" aria-label="Созданный QR-код"></canvas>
+      <p id="status" role="status">QR-код готов.</p>
+      <button id="download" type="button">Скачать PNG</button>
+      <button id="copy-content" type="button">Копировать содержимое</button>
+      <button id="download-svg" type="button">Скачать SVG</button>
+    </section>
+
+    <section id="history-section">
+      <h2>История QR-кодов</h2>
+      <p class="small-note">Последние 10 созданных кодов сохраняются в этом браузере.</p>
+      <div id="history-list"></div>
+      <button id="clear-history" type="button">Очистить историю</button>
     </section>
   </main>
 
   <footer>QRYPT — QR tools</footer>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
   <script>
-    const content = document.getElementById("content");
-    const result = document.getElementById("result");
-    const qr = document.getElementById("qr");
-    const status = document.getElementById("status");
-    const download = document.getElementById("download");
+    const $ = (id) => document.getElementById(id);
+
+    const mode = $("mode");
+    const content = $("content");
+    const wifiName = $("wifi-name");
+    const wifiPassword = $("wifi-password");
+    const wifiSecurity = $("wifi-security");
+    const contactName = $("contact-name");
+    const contactPhone = $("contact-phone");
+    const contactEmail = $("contact-email");
+    const callPhone = $("call-phone");
+    const smsPhone = $("sms-phone");
+    const smsMessage = $("sms-message");
+
+    const textFields = $("text-fields");
+    const wifiFields = $("wifi-fields");
+    const contactFields = $("contact-fields");
+    const callFields = $("call-fields");
+    const smsFields = $("sms-fields");
+
+    const size = $("size");
+    const foreground = $("foreground");
+    const background = $("background");
+    const canvas = $("qr-canvas");
+    const ctx = canvas.getContext("2d");
+    const result = $("result");
+    const status = $("status");
+    const downloadButton = $("download");
+    const copyButton = $("copy-content");
+    const svgButton = $("download-svg");
+    const generateButton = $("generate");
+    const historyList = $("history-list");
 
     let currentValue = "";
+    let currentQR = null;
+    let uploadedLogo = null;
+    let uploadedLogoData = null;
+    let history = [];
 
-    document.getElementById("generate").addEventListener("click", () => {
-      const value = content.value.trim();
+    try {
+      const savedHistory = localStorage.getItem("qrypt-history");
+      if (savedHistory) {
+        const parsed = JSON.parse(savedHistory);
+        if (Array.isArray(parsed)) history = parsed.slice(0, 10);
+      }
+    } catch (error) {
+      history = [];
+    }
 
-      if (!value) {
-        alert("Сначала введи текст или ссылку.");
+    const modeNames = {
+      text: "Текст или ссылка",
+      wifi: "Wi-Fi",
+      contact: "Контакт",
+      call: "Звонок",
+      sms: "SMS"
+    };
+
+    function updateFields() {
+      textFields.hidden = mode.value !== "text";
+      wifiFields.hidden = mode.value !== "wifi";
+      contactFields.hidden = mode.value !== "contact";
+      callFields.hidden = mode.value !== "call";
+      smsFields.hidden = mode.value !== "sms";
+    }
+
+    mode.addEventListener("change", updateFields);
+    updateFields();
+
+    function escapeWifi(value) {
+      return value.replace(/([\\;,:"])/g, "\\$1");
+    }
+
+    function escapeVCard(value) {
+      return value
+        .replace(/\\/g, "\\\\")
+        .replace(/\r?\n/g, "\\n")
+        .replace(/,/g, "\\,")
+        .replace(/;/g, "\\;");
+    }
+
+    function validPhone(phone) {
+      return /^\+?[0-9\s()-]{5,20}$/.test(phone);
+    }
+
+    function getCurrentQRContent() {
+      if (mode.value === "text") {
+        return content.value.trim();
+      }
+
+      if (mode.value === "wifi") {
+        const name = wifiName.value.trim();
+        const password = wifiPassword.value;
+        const security = wifiSecurity.value;
+
+        if (!name) {
+          alert("Введи название сети Wi-Fi.");
+          return null;
+        }
+
+        if (security !== "nopass" && !password) {
+          alert("Введи пароль Wi-Fi или выбери «Без пароля».");
+          return null;
+        }
+
+        return `WIFI:T:${security};S:${escapeWifi(name)};P:${escapeWifi(password)};;`;
+      }
+
+      if (mode.value === "contact") {
+        const name = contactName.value.trim();
+        const phone = contactPhone.value.trim();
+        const email = contactEmail.value.trim();
+
+        if (!name && !phone && !email) {
+          alert("Введи хотя бы имя, телефон или email.");
+          return null;
+        }
+
+        if (phone && !validPhone(phone)) {
+          alert("Проверь номер телефона контакта.");
+          return null;
+        }
+
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          alert("Проверь адрес email.");
+          return null;
+        }
+
+        const lines = ["BEGIN:VCARD", "VERSION:3.0"];
+        if (name) lines.push(`FN:${escapeVCard(name)}`);
+        if (phone) lines.push(`TEL;TYPE=CELL:${escapeVCard(phone)}`);
+        if (email) lines.push(`EMAIL:${escapeVCard(email)}`);
+        lines.push("END:VCARD");
+
+        return lines.join("\r\n");
+      }
+
+      if (mode.value === "call") {
+        const phone = callPhone.value.trim();
+
+        if (!validPhone(phone)) {
+          alert("Введи корректный номер телефона.");
+          return null;
+        }
+
+        return `tel:${phone.replace(/[\s()-]/g, "")}`;
+      }
+
+      if (mode.value === "sms") {
+        const phone = smsPhone.value.trim();
+
+        if (!validPhone(phone)) {
+          alert("Введи корректный номер телефона.");
+          return null;
+        }
+
+        const cleanPhone = phone.replace(/[\s()-]/g, "");
+        const message = smsMessage.value.trim();
+
+        return `SMSTO:${cleanPhone}:${message}`;
+      }
+
+      return null;
+    }
+
+    function roundRect(context, x, y, width, height, radius) {
+      const r = Math.min(radius, width / 2, height / 2);
+      context.beginPath();
+      context.moveTo(x + r, y);
+      context.arcTo(x + width, y, x + width, y + height, r);
+      context.arcTo(x + width, y + height, x, y + height, r);
+      context.arcTo(x, y + height, x, y, r);
+      context.arcTo(x, y, x + width, y, r);
+      context.closePath();
+    }
+
+    function drawQR(value) {
+      const qr = qrcode(0, "H");
+      qr.addData(value);
+      qr.make();
+
+      const count = qr.getModuleCount();
+      const quietZone = 4;
+      const total = count + quietZone * 2;
+      const dimension = Number(size.value);
+
+      canvas.width = dimension;
+      canvas.height = dimension;
+
+      ctx.fillStyle = background.value;
+      ctx.fillRect(0, 0, dimension, dimension);
+
+      const cellSize = dimension / total;
+      ctx.fillStyle = foreground.value;
+
+      for (let row = 0; row < count; row++) {
+        for (let col = 0; col < count; col++) {
+          if (qr.isDark(row, col)) {
+            const x = Math.round((col + quietZone) * cellSize);
+            const y = Math.round((row + quietZone) * cellSize);
+            const right = Math.round((col + quietZone + 1) * cellSize);
+            const bottom = Math.round((row + quietZone + 1) * cellSize);
+            ctx.fillRect(x, y, right - x, bottom - y);
+          }
+        }
+      }
+
+      if (uploadedLogo) {
+        const logoSize = dimension * 0.19;
+        const padding = dimension * 0.025;
+        const boxSize = logoSize + padding * 2;
+        const x = (dimension - boxSize) / 2;
+        const y = (dimension - boxSize) / 2;
+
+        ctx.fillStyle = background.value;
+        roundRect(ctx, x, y, boxSize, boxSize, dimension * 0.025);
+        ctx.fill();
+
+        ctx.drawImage(
+          uploadedLogo,
+          (dimension - logoSize) / 2,
+          (dimension - logoSize) / 2,
+          logoSize,
+          logoSize
+        );
+      }
+
+      currentQR = { qr, count, quietZone, total, dimension };
+    }
+
+    function setStatus(message) {
+      status.textContent = message;
+    }
+
+    function saveHistory(value) {
+      const item = {
+        value,
+        mode: mode.value,
+        label: modeNames[mode.value],
+        date: new Date().toLocaleString()
+      };
+
+      history = [item, ...history.filter(entry =>
+        entry.value !== value || entry.mode !== mode.value
+      )].slice(0, 10);
+
+      try {
+        localStorage.setItem("qrypt-history", JSON.stringify(history));
+      } catch (error) {
+        // QR generation still works if browser storage is unavailable.
+      }
+
+      renderHistory();
+    }
+
+    function renderHistory() {
+      historyList.replaceChildren();
+
+      if (!history.length) {
+        const note = document.createElement("p");
+        note.className = "small-note";
+        note.textContent = "Пока история пуста.";
+        historyList.appendChild(note);
         return;
       }
 
-      currentValue = value;
-      result.style.display = "block";
-      status.textContent = "Создаём QR-код...";
-      download.disabled = true;
+      history.forEach((item, index) => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "history-item";
 
-      qr.onload = () => {
-        status.textContent = "QR-код готов. Проверь его сканированием.";
-        download.disabled = false;
-      };
+        const title = document.createElement("strong");
+        title.textContent = item.label || "QR-код";
 
-      qr.onerror = () => {
-        status.textContent = "Не удалось создать код. Проверь подключение к интернету.";
-        download.disabled = true;
-      };
+        const preview = document.createElement("p");
+        const shortValue = item.value.length > 90
+          ? item.value.slice(0, 90) + "…"
+          : item.value;
+        preview.textContent = shortValue;
 
-      qr.src =
-        "https://api.qrserver.com/v1/create-qr-code/?size=500x500&format=png&data=" +
-        encodeURIComponent(value);
-    });
+        const date = document.createElement("p");
+        date.textContent = item.date || "";
 
-    download.addEventListener("click", async () => {
-      if (!currentValue || !qr.complete || !qr.naturalWidth) return;
+        const restore = document.createElement("button");
+        restore.type = "button";
+        restore.textContent = "Восстановить QR-код";
+        restore.addEventListener("click", () => {
+          // Restore the exact saved payload as text.
+          mode.value = "text";
+          updateFields();
+          content.value = item.value;
+          generateQR();
+        });
+
+        wrapper.append(title, preview, date, restore);
+        historyList.appendChild(wrapper);
+      });
+    }
+
+    function generateQR() {
+      const value = getCurrentQRContent();
+      if (value === null) return;
+
+      if (!value.trim()) {
+        alert("Сначала введи текст или данные.");
+        return;
+      }
 
       try {
-        const response = await fetch(qr.src);
-        if (!response.ok) throw new Error("Download failed");
+        drawQR(value);
+        currentValue = value;
+        result.style.display = "block";
+        setStatus("QR-код готов. Проверь его сканированием.");
+        saveHistory(value);
+      } catch (error) {
+        currentQR = null;
+        setStatus("Не удалось создать QR-код. Попробуй сократить текст.");
+        alert("Не удалось создать QR-код. Возможно, введён слишком большой объём данных.");
+      }
+    }
 
-        const blob = await response.blob();
+    generateButton.addEventListener("click", generateQR);
+
+    [size, foreground, background].forEach(control => {
+      control.addEventListener("change", () => {
+        if (currentValue) generateFromSavedValue();
+      });
+    });
+
+    function generateFromSavedValue() {
+      if (!currentValue) return;
+
+      try {
+        drawQR(currentValue);
+        setStatus("QR-код обновлён.");
+      } catch (error) {
+        setStatus("Не удалось обновить QR-код.");
+      }
+    }
+
+    $("logo-upload").addEventListener("change", (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+        alert("Выбери PNG, JPG или WebP изображение.");
+        event.target.value = "";
+        return;
+      }
+
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        const image = new Image();
+
+        image.onload = () => {
+          uploadedLogo = image;
+          uploadedLogoData = reader.result;
+
+          if (currentValue) {
+            generateFromSavedValue();
+          }
+        };
+
+        image.onerror = () => {
+          alert("Не удалось загрузить изображение.");
+        };
+
+        image.src = reader.result;
+      };
+
+      reader.onerror = () => alert("Не удалось прочитать файл.");
+      reader.readAsDataURL(file);
+    });
+
+    $("remove-logo").addEventListener("click", () => {
+      uploadedLogo = null;
+      uploadedLogoData = null;
+      $("logo-upload").value = "";
+
+      if (currentValue) generateFromSavedValue();
+    });
+
+    $("download").addEventListener("click", () => {
+      if (!currentValue || !currentQR) {
+        alert("Сначала создай QR-код.");
+        return;
+      }
+
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          alert("Не удалось подготовить PNG.");
+          return;
+        }
+
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
-
         link.href = url;
-        link.download = "qrypt-qr.png";
+        link.download = `qrypt-qr-${canvas.width}px.png`;
         link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }, "image/png");
+    });
 
-        URL.revokeObjectURL(url);
-      } catch {
-        status.textContent =
-          "Скачивание не удалось. Проверь интернет и попробуй снова.";
+    copyButton.addEventListener("click", async () => {
+      if (!currentValue) {
+        alert("Сначала создай QR-код.");
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(currentValue);
+        setStatus("Содержимое QR-кода скопировано.");
+      } catch (error) {
+        const temporary = document.createElement("textarea");
+        temporary.value = currentValue;
+        document.body.appendChild(temporary);
+        temporary.select();
+
+        const copied = document.execCommand("copy");
+        temporary.remove();
+
+        setStatus(copied
+          ? "Содержимое QR-кода скопировано."
+          : "Не удалось скопировать. Попробуй вручную.");
       }
     });
+
+    svgButton.addEventListener("click", () => {
+      if (!currentValue || !currentQR) {
+        alert("Сначала создай QR-код.");
+        return;
+      }
+
+      try {
+        const { qr, count, quietZone, total, dimension } = currentQR;
+        const cellSize = dimension / total;
+        const rects = [];
+
+        for (let row = 0; row < count; row++) {
+          for (let col = 0; col < count; col++) {
+            if (qr.isDark(row, col)) {
+              rects.push(
+                `<rect x="${col + quietZone}" y="${row + quietZone}" width="1" height="1"/>`
+              );
+            }
+          }
+        }
+
+        let logoSvg = "";
+
+        if (uploadedLogoData) {
+          const logoSize = total * 0.19;
+          const padding = total * 0.025;
+          const boxSize = logoSize + padding * 2;
+          const x = (total - boxSize) / 2;
+          const y = (total - boxSize) / 2;
+
+          logoSvg =
+            `<rect x="${x}" y="${y}" width="${boxSize}" height="${boxSize}" ` +
+            `rx="${total * 0.025}" fill="${background.value}"/>` +
+            `<image href="${uploadedLogoData}" x="${(total - logoSize) / 2}" ` +
+            `y="${(total - logoSize) / 2}" width="${logoSize}" ` +
+            `height="${logoSize}" preserveAspectRatio="xMidYMid meet"/>`;
+        }
+
+        const svg =
+          `<svg xmlns="http://www.w3.org/2000/svg" ` +
+          `width="${dimension}" height="${dimension}" ` +
+          `viewBox="0 0 ${total} ${total}">` +
+          `<rect width="${total}" height="${total}" fill="${background.value}"/>` +
+          `<g fill="${foreground.value}">${rects.join("")}</g>` +
+          logoSvg +
+          `</svg>`;
+
+        const blob = new Blob([svg], {
+          type: "image/svg+xml;charset=utf-8"
+        });
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `qrypt-qr-${dimension}px.svg`;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } catch (error) {
+        alert("Не удалось скачать SVG. Создай QR-код ещё раз и повтори.");
+      }
+    });
+
+    $("clear-history").addEventListener("click", () => {
+      history = [];
+
+      try {
+        localStorage.removeItem("qrypt-history");
+      } catch (error) {
+        // Continue even if storage is unavailable.
+      }
+
+      renderHistory();
+    });
+
+    renderHistory();
   </script>
 </body>
 </html>
